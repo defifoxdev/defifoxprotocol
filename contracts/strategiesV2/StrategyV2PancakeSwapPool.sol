@@ -9,28 +9,26 @@ import "@openzeppelinBase/contracts/math/SafeMath.sol";
 import "../../interfaces/uniswapv2/IUniswapV2Router02.sol";
 import "../../interfaces/uniswapv2/IUniswapV2Pair.sol";
 import "../../interfaces/uniswapv2/IUniswapV2Factory.sol";
-import "../../interfaces/IMdexHecoPool.sol";
-import "../../interfaces/IMdexHecoSwapPool.sol";
+import "../../interfaces/IPancakePool.sol";
 
 import "../interfaces/IStrategyV2SwapPool.sol";
 import "../utils/TenMath.sol";
 
 // Connecting to third party swap for pool lptoken
-contract StrategyV2MDexSwapPool is IStrategyV2SwapPool {
+contract StrategyV2PancakeSwapPool is IStrategyV2SwapPool {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
-    IUniswapV2Factory public constant factory = IUniswapV2Factory(0x3CD1C46068dAEa5Ebb0d3f55F6915B10648062B8);
-    IUniswapV2Router02 public constant router = IUniswapV2Router02(0x7DAe51BD3E3376B8c7c4900E9107f12Be3AF1bA8);
+    IUniswapV2Factory public constant factory = IUniswapV2Factory(0x01bF7C66c6BD861915CdaaE475042d3c4BaE16A7);
+    IUniswapV2Router02 public constant router = IUniswapV2Router02(0xCDe540d7eAFE93aC5fE6233Bee57E1270D3E330F);
 
-    IMdexHecoPool public constant farmpool = IMdexHecoPool(0xc48FE252Aa631017dF253578B1405ea399728A50);
-    IMdexHecoSwapPool public constant swappool = IMdexHecoSwapPool(0x782395303692aBeD877d2737Aa7982345eB44c11);
-    address public constant rewardToken = address(0x9C65AB58d8d978DB963e63f2bfB7121627e3a739);
+    IPancakePool public constant farmpool = IPancakePool(0x20eC291bB8459b6145317E7126532CE7EcE5056f);
+    address public constant swappool = address(0);
+    address public constant rewardToken = address(0xE02dF9e3e622DeBdD69fb838bB799E3F168902c5);
 
     address public strategy;
 
     constructor() public {
-        
     }
 
     function setStrategy(address _strategy) external override {
@@ -44,7 +42,7 @@ contract StrategyV2MDexSwapPool is IStrategyV2SwapPool {
     }
 
     function getName() external override view returns (string memory name) {
-        name = 'mdex';
+        name = 'pancake';
     }
 
     function getPair(address _t0, address _t1) 
@@ -191,16 +189,16 @@ contract StrategyV2MDexSwapPool is IStrategyV2SwapPool {
 
     function getDepositToken(uint256 _poolId) 
         public override view returns (address lpToken) {
-        (lpToken,,,,,) = farmpool.poolInfo(_poolId);
+        lpToken = address(_poolId);
     }
 
     function getRewardToken(uint256 _poolId) 
-        external override view returns (address returnToken) {
+        external override view returns (address) {
         return rewardToken;
     }
 
     function getPending(uint256 _poolId) external override view returns (uint256 rewards) {
-        rewards = farmpool.pending(_poolId, address(this));
+        rewards = farmpool.pendingCake(_poolId, address(this));
     }
 
     function deposit(uint256 _poolId, bool _autoPool)
@@ -260,9 +258,7 @@ contract StrategyV2MDexSwapPool is IStrategyV2SwapPool {
 
     function extraRewards()
         external override onlyStrategy returns (address token, uint256 rewards) {
-        token = swappool.mdx();
-        swappool.takerWithdraw();
-        rewards = _safeTransferAll(token, strategy);
+        return (address(0), 0);
     }
 
     function _safeTransferAll(address _token, address _to)

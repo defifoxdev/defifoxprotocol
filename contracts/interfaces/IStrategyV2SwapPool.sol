@@ -4,6 +4,8 @@ pragma solidity 0.6.12;
 
 interface IStrategyV2SwapPool {
 
+    function setStrategy(address _strategy) external;
+
     // get strategy
     function getName() external view returns (string memory);
 

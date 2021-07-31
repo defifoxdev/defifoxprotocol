@@ -2,26 +2,26 @@
 
 pragma solidity 0.6.12;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
-import "@openzeppelin/contracts/math/SafeMath.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelinUpgrade/contracts/token/ERC20/IERC20Upgradeable.sol";
+import "@openzeppelinUpgrade/contracts/token/ERC20/SafeERC20Upgradeable.sol";
+import "@openzeppelinUpgrade/contracts/math/SafeMathUpgradeable.sol";
+import "@openzeppelinUpgrade/contracts/access/OwnableUpgradeable.sol";
 
 import '../interfaces/ICompActionTrigger.sol';
 import '../interfaces/IActionPools.sol';
 import '../interfaces/IClaimFromBank.sol';
+import "../interfaces/IRewardsToken.sol";
 
 import "../utils/TenMath.sol";
-import '../BOOToken.sol';
 
 // Note that it's ownable and the owner wields tremendous power. The ownership
 // will be transferred to a governance smart contract once Token is sufficiently
 // distributed and the community can show to govern itself.
 //
 // Have fun reading it. Hopefully it's bug-free. God bless.
-contract ActionCompPools is Ownable, IActionPools, IClaimFromBank {
-    using SafeMath for uint256;
-    using SafeERC20 for IERC20;
+contract ActionCompPools is OwnableUpgradeable, IActionPools, IClaimFromBank {
+    using SafeMathUpgradeable for uint256;
+    using SafeERC20Upgradeable for IERC20Upgradeable;
 
     // Info of each user.
     struct UserInfo {
@@ -33,7 +33,7 @@ contract ActionCompPools is Ownable, IActionPools, IClaimFromBank {
     struct PoolInfo {
         address callFrom;           // Address of trigger contract.
         uint256 callId;             // id of trigger action id, or maybe its poolid
-        IERC20  rewardToken;        // Address of reward token address.
+        IERC20Upgradeable  rewardToken;        // Address of reward token address.
         uint256 rewardMaxPerBlock;  // max rewards per block.
         uint256 lastRewardBlock;    // Last block number that Token distribution occurs.
         uint256 lastRewardTotal;    // Last total amount that reward Token distribution use for calculation.
@@ -55,8 +55,8 @@ contract ActionCompPools is Ownable, IActionPools, IClaimFromBank {
     mapping (address => uint256) public rewardRestricted;
     // event notify source, contract in whitlist
     mapping (address => bool) public eventSources;
-    // mint from bootoken, when reward token is booToken , mint it
-    BOOToken public booToken;
+    // mint from foxtoken, when reward token is FOXToken GRAPToken, mint it
+    mapping(address => uint256) public mintTokens;
     // mint for boodev, while mint bootoken, mint a part for dev
     address public boodev;
     // allow bank proxy claim
@@ -71,11 +71,12 @@ contract ActionCompPools is Ownable, IActionPools, IClaimFromBank {
     event SetRewardMaxPerBlock(uint256 indexed _pid, uint256 _maxPerBlock);
     event SetRewardRestricted(address _hacker, uint256 _rate);
 
-    constructor (address _bank, address _booToken, address _boodev) public {
+    function initialize(address _bank, address[] memory _mintTokens, uint256[] memory _mintFee, address _boodev) public initializer {
+        __Ownable_init();
         bank = _bank;
-        booToken = BOOToken(_booToken);
-        require(booToken.totalSupply() >= 0, 'booToken');
         boodev = _boodev;
+
+        setMintTokens(_mintTokens, _mintFee);
     }
 
     // If the user transfers TH to contract, it will revert
@@ -108,7 +109,7 @@ contract ActionCompPools is Ownable, IActionPools, IClaimFromBank {
         poolInfo.push(PoolInfo({
             callFrom: _callFrom,
             callId: _callId,
-            rewardToken: IERC20(_rewardToken),
+            rewardToken: IERC20Upgradeable(_rewardToken),
             rewardMaxPerBlock: _maxPerBlock,
             lastRewardBlock: block.number,
             lastRewardTotal: 0,
@@ -128,6 +129,16 @@ contract ActionCompPools is Ownable, IActionPools, IClaimFromBank {
     function setRewardMaxPerBlock(uint256 _pid, uint256 _maxPerBlock) external onlyOwner {
         poolInfo[_pid].rewardMaxPerBlock = _maxPerBlock;
         emit SetRewardMaxPerBlock(_pid, _maxPerBlock);
+    }
+
+    function setMintTokens(address[] memory _mintTokens, uint256[] memory _mintFee) public onlyOwner {
+        require(_mintTokens.length == _mintFee.length, 'length error');
+        for(uint256 i = 0; i < _mintTokens.length; i ++) {
+            require(IERC20Upgradeable(_mintTokens[i]).totalSupply() >= 0, '_mintTokens');
+            IRewardsToken(_mintTokens[i]).checkWhitelist(address(this));
+            mintTokens[_mintTokens[i]] = _mintFee[i];
+            require(_mintFee[i] == 0 || _mintFee[i] >= 1e18);
+        }
     }
 
     function setAutoUpdate(uint256 _pid, bool _set) external onlyOwner {
@@ -154,7 +165,7 @@ contract ActionCompPools is Ownable, IActionPools, IClaimFromBank {
         require(_from <= _to, 'getBlocksReward error');
         PoolInfo storage pool = poolInfo[_pid];
         value = pool.rewardMaxPerBlock.mul(_to.sub(_from));
-        if( address(pool.rewardToken) == address(booToken)) {
+        if( mintTokens[address(pool.rewardToken)] > 0) {
             return value;
         }
         if( pool.lastRewardClosed.add(value) > pool.poolTotalRewards) {
@@ -221,9 +232,12 @@ contract ActionCompPools is Ownable, IActionPools, IClaimFromBank {
         uint256 poolReward = getBlocksReward(_pid, pool.lastRewardBlock, block.number);
         if (poolReward > 0) {
             address rewardToken = address(pool.rewardToken);
-            if( rewardToken == address(booToken)) {
-                booToken.mint(address(this), poolReward);
-                booToken.mint(boodev, poolReward.div(8));   // mint for dev
+            if( mintTokens[rewardToken] > 0) {
+                IRewardsToken(rewardToken).mint(address(this), poolReward);
+                if(mintTokens[rewardToken] > 1e18) {
+                    uint256 mintFee = poolReward.mul(mintTokens[rewardToken].sub(1e18)).div(1e18);
+                    IRewardsToken(rewardToken).mint(boodev, mintFee);   // mint for dev
+                }
                 pool.poolTotalRewards = pool.poolTotalRewards.add(poolReward);
                 tokenTotalRewards[rewardToken] = tokenTotalRewards[rewardToken].add(poolReward);
             }
@@ -288,7 +302,7 @@ contract ActionCompPools is Ownable, IActionPools, IClaimFromBank {
         updatePool(_pid);
         PoolInfo storage pool = poolInfo[_pid];
         address rewardToken = address(pool.rewardToken);
-        if(rewardToken == address(booToken)) {
+        if(mintTokens[rewardToken] > 0) {
             return ;
         }
         uint256 balance = pool.rewardToken.balanceOf(address(this));
@@ -402,7 +416,7 @@ contract ActionCompPools is Ownable, IActionPools, IClaimFromBank {
     }
 
     // Safe Token transfer function, just in case if rounding error causes pool to not have enough Tokens.
-    function safeTokenTransfer(IERC20 _token, address _to, uint256 _amount) internal returns (uint256 value) {
+    function safeTokenTransfer(IERC20Upgradeable _token, address _to, uint256 _amount) internal returns (uint256 value) {
         uint256 balance = _token.balanceOf(address(this));
         value = _amount > balance ? balance : _amount;
         if ( value > 0 ) {

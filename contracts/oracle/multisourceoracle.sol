@@ -3,14 +3,14 @@
 pragma solidity 0.6.12;
 
 import "@chainlink/contracts/src/v0.6/interfaces/AggregatorV3Interface.sol";
-import "@openzeppelin/contracts/math/SafeMath.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelinUpgrade/contracts/math/SafeMathUpgradeable.sol";
+import "@openzeppelinUpgrade/contracts/access/OwnableUpgradeable.sol";
 
 import "../../interfaces/ICTokenInterface.sol";
 import "../interfaces/ITokenOracle.sol";
 
-contract MultiSourceOracle is Ownable, ITokenOracle {
-    using SafeMath for uint256;
+contract MultiSourceOracle is OwnableUpgradeable, ITokenOracle {
+    using SafeMathUpgradeable for uint256;
 
     struct PriceData {
         uint price;
@@ -26,6 +26,10 @@ contract MultiSourceOracle is Ownable, ITokenOracle {
     event PriceFeed(address indexed _token, address _feed);
 
     constructor() public {
+    }
+
+    function initialize() public initializer {
+        __Ownable_init();
         opers[msg.sender] = true;
     }
 

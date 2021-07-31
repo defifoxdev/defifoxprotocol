@@ -2,31 +2,40 @@
 
 pragma solidity 0.6.12;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
-import "@openzeppelin/contracts/math/SafeMath.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelinUpgrade/contracts/token/ERC20/IERC20Upgradeable.sol";
+import "@openzeppelinUpgrade/contracts/token/ERC20/SafeERC20Upgradeable.sol";
+import "@openzeppelinUpgrade/contracts/math/SafeMathUpgradeable.sol";
+import "@openzeppelinUpgrade/contracts/access/OwnableUpgradeable.sol";
 
 import "../interfaces/ISafeBox.sol";
 import '../interfaces/IActionPools.sol';
 import '../interfaces/ICompActionTrigger.sol';
 import "../interfaces/ITenBankHall.sol";
 import "../interfaces/IStrategyV2Pair.sol";
-import "../interfaces/IStrategyV2PairHelper.sol";
 
 import "../utils/TenMath.sol";
 import "./StrategyV2Data.sol";
-import "./StrategyV2PairsHelper.sol";
 
 // farm strategy
-contract StrategyV2Pair is StrategyV2Data, Ownable, IStrategyV2Pair, ICompActionTrigger {
-    using SafeMath for uint256;
-    using SafeERC20 for IERC20;
+contract StrategyV2Pair is StrategyV2Data, OwnableUpgradeable, IStrategyV2Pair, ICompActionTrigger {
+    using SafeMathUpgradeable for uint256;
+    using SafeERC20Upgradeable for IERC20Upgradeable;
+    
+    function initialize(address bank_, address _swapPoolImpl, address _helperImpl, address _compActionPool, 
+            address _config, address _priceChecker, address _devAddr) public initializer {
+        __Ownable_init();
 
-    constructor(address bank_) public {
         _bank = bank_;
         _this = address(this);
-        helperImpl = address(new StrategyV2PairHelper());
+        swapPoolImpl = IStrategyV2SwapPool(_swapPoolImpl);
+        swapPoolImpl.setStrategy(address(this));
+
+        helperImpl = _helperImpl;
+
+        compActionPool = IActionPools(_compActionPool);
+        devAddr = _devAddr;
+        priceChecker = IPriceChecker(_priceChecker);
+        sconfig = IStrategyConfig(_config);
     }
     
     modifier onlyBank() {
@@ -47,29 +56,19 @@ contract StrategyV2Pair is StrategyV2Data, Ownable, IStrategyV2Pair, ICompAction
         return address(0);
     }
 
-    function setPoolImpl(address _swapPoolImpl) external onlyOwner {
-        require(address(swapPoolImpl) == address(0), 'only once');
-        emit SetPoolImpl(_this, _swapPoolImpl);
-        swapPoolImpl = IStrategyV2SwapPool(_swapPoolImpl);
-    }
-
     function setWhitelist(address _contract, bool _enable) external onlyOwner {
         whitelist[_contract] = _enable;
-    }
-
-    function setComponents(address _compActionPool, address _buyback, address _priceChecker, address _config)
-        external onlyOwner {
-        compActionPool = IActionPools(_compActionPool);
-        buyback = IBuyback(_buyback);
-        priceChecker = IPriceChecker(_priceChecker);
-        sconfig = IStrategyConfig(_config);
-        emit SetComponents(_compActionPool, _buyback, _priceChecker, _config);
     }
 
     function setPoolConfig(uint256 _pid, string memory _key, uint256 _value)
         external onlyOwner {
         poolConfig[_pid][_key] = _value;
         emit SetPoolConfig(_pid, _key, _value);
+    }
+
+    function setDevAddr(address _devAddr) public {
+        require(devAddr == msg.sender, 'wu?');
+        devAddr = _devAddr;
     }
 
     function poolLength() external override view returns (uint256) {
@@ -318,18 +317,18 @@ contract StrategyV2Pair is StrategyV2Data, Ownable, IStrategyV2Pair, ICompAction
         // gather fee
         {
             (address gather, uint256 feeamount) = calcRefundFee(_pid, newRewards);
-            if(feeamount > 0) IERC20(refundToken).safeTransfer(gather, feeamount);
+            if(feeamount > 0) IERC20Upgradeable(refundToken).safeTransfer(gather, feeamount);
             newRewards = newRewards.sub(feeamount);
         }
 
         // swap to basetoken
         if(refundToken != pool.collateralToken[0] && refundToken != pool.collateralToken[1]) {
-            IERC20(refundToken).safeTransfer(address(swapPoolImpl), newRewards);
+            IERC20Upgradeable(refundToken).safeTransfer(address(swapPoolImpl), newRewards);
             newRewards = swapPoolImpl.swapTokenTo(refundToken, newRewards, pool.baseToken, _this);
             refundToken = pool.baseToken;
         }
 
-        IERC20(refundToken).safeTransfer(address(swapPoolImpl), newRewards);
+        IERC20Upgradeable(refundToken).safeTransfer(address(swapPoolImpl), newRewards);
         lpAmount = swapPoolImpl.deposit(pool.poolId, true);
 
         pool.totalLPReinvest = pool.totalLPReinvest.add(lpAmount);
@@ -385,8 +384,8 @@ contract StrategyV2Pair is StrategyV2Data, Ownable, IStrategyV2Pair, ICompAction
         // deposit fee
         {
             (address gather, uint256 bAmount0, uint256 bAmount1) = calcDepositFee(_pid);
-            if(bAmount0 > 0) IERC20(token0).safeTransfer(gather, bAmount0);
-            if(bAmount1 > 0) IERC20(token1).safeTransfer(gather, bAmount1);
+            if(bAmount0 > 0) IERC20Upgradeable(token0).safeTransfer(gather, bAmount0);
+            if(bAmount1 > 0) IERC20Upgradeable(token1).safeTransfer(gather, bAmount1);
         }
         
         // add liquidity and deposit
@@ -488,8 +487,8 @@ contract StrategyV2Pair is StrategyV2Data, Ownable, IStrategyV2Pair, ICompAction
 
         {
             (address gather, uint256 feeAmount0, uint256 feeAmount1) = calcWithdrawFee(_pid, _account, _rate);
-            if(feeAmount0 > 0) IERC20(token0).safeTransfer(gather, feeAmount0);
-            if(feeAmount1 > 0) IERC20(token1).safeTransfer(gather, feeAmount1); 
+            if(feeAmount0 > 0) IERC20Upgradeable(token0).safeTransfer(gather, feeAmount0);
+            if(feeAmount1 > 0) IERC20Upgradeable(token1).safeTransfer(gather, feeAmount1); 
         }
 
         repayBorrow(_pid, _account, _rate, true);
@@ -563,13 +562,13 @@ contract StrategyV2Pair is StrategyV2Data, Ownable, IStrategyV2Pair, ICompAction
             (address fromToken, address toToken) = swap ? 
                 (pool.collateralToken[1], pool.collateralToken[0]) :
                 (pool.collateralToken[0], pool.collateralToken[1]);
-            IERC20(fromToken).safeTransfer(address(swapPoolImpl), swapAmount);
+            IERC20Upgradeable(fromToken).safeTransfer(address(swapPoolImpl), swapAmount);
             swapPoolImpl.swapTokenTo(fromToken, swapAmount, toToken, _this);
         }
 
         if(bAmount > 0){
-            bAmount = TenMath.min(bAmount, IERC20(btoken).balanceOf(_this));
-            IERC20(btoken).safeTransfer(borrowFrom, bAmount);
+            bAmount = TenMath.min(bAmount, IERC20Upgradeable(btoken).balanceOf(_this));
+            IERC20Upgradeable(btoken).safeTransfer(borrowFrom, bAmount);
             ISafeBox(borrowFrom).repay(user.bids[_index], bAmount);
             emit StrategyRepayBorrow2(_this, _pid, _account, borrowFrom, bAmount);
         }
@@ -623,7 +622,7 @@ contract StrategyV2Pair is StrategyV2Data, Ownable, IStrategyV2Pair, ICompAction
     function liquidation(uint256 _pid, address _account, address _hunter, uint256 _maxDebt)
         external override onlyBank {
         
-        _maxDebt;
+        // _maxDebt;
 
         UserInfo storage user = userInfo2[_pid][_account];
         PoolInfo storage pool = poolInfo[_pid];
@@ -662,7 +661,7 @@ contract StrategyV2Pair is StrategyV2Data, Ownable, IStrategyV2Pair, ICompAction
         // liquidation fee
         {
             (address gather, uint256 feeAmount) = calcLiquidationFee(_pid, _account);
-            if(feeAmount > 0) IERC20(pool.baseToken).safeTransfer(gather, feeAmount);
+            if(feeAmount > 0) IERC20Upgradeable(pool.baseToken).safeTransfer(gather, feeAmount);
         }
 
         checkOraclePrice(_pid, true);
@@ -678,24 +677,21 @@ contract StrategyV2Pair is StrategyV2Data, Ownable, IStrategyV2Pair, ICompAction
     }
     
     function makeExtraRewards() external {
-        if(address(buyback) == address(0)) {
+        if(address(devAddr) == address(0)) {
             return ;
         }
         (address rewardsToken, uint256 value) = swapPoolImpl.extraRewards();
         if(rewardsToken == address(0) || value == 0) {
             return ;
         }
-        uint256 fee = value.mul(3e6).div(1e9);
-        IERC20(rewardsToken).transfer(msg.sender, fee);
-        IERC20(rewardsToken).approve(address(buyback), value.sub(fee));
-        buyback.buyback(rewardsToken, value.sub(fee));
+        IERC20Upgradeable(rewardsToken).safeTransfer(devAddr, value);
     }
 
     function _safeTransferAll(address _token, address _to)
         internal returns (uint256 value){
-        value = IERC20(_token).balanceOf(_this);
+        value = IERC20Upgradeable(_token).balanceOf(_this);
         if(value > 0) {
-            IERC20(_token).safeTransfer(_to, value);
+            IERC20Upgradeable(_token).safeTransfer(_to, value);
         }
     }
 

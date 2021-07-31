@@ -2,11 +2,11 @@
 
 pragma solidity 0.6.12;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
-import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import "@openzeppelin/contracts/math/SafeMath.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelinUpgrade/contracts/token/ERC20/IERC20Upgradeable.sol";
+import "@openzeppelinUpgrade/contracts/token/ERC20/SafeERC20Upgradeable.sol";
+import "@openzeppelinUpgrade/contracts/utils/ReentrancyGuardUpgradeable.sol";
+import "@openzeppelinUpgrade/contracts/math/SafeMathUpgradeable.sol";
+import "@openzeppelinUpgrade/contracts/access/OwnableUpgradeable.sol";
 
 import './interfaces/IStrategyLink.sol';
 import './interfaces/ITenBankHall.sol';
@@ -14,9 +14,9 @@ import './interfaces/ISafeBox.sol';
 import './interfaces/IClaimFromBank.sol';
 
 // TenBank bank
-contract TenBankHall is Ownable, ITenBankHall, ReentrancyGuard {
-    using SafeMath for uint256;
-    using SafeERC20 for IERC20;
+contract TenBankHall is OwnableUpgradeable, ITenBankHall, ReentrancyGuardUpgradeable {
+    using SafeMathUpgradeable for uint256;
+    using SafeERC20Upgradeable for IERC20Upgradeable;
 
     struct StrategyInfo {
         bool isListed;          // if enabled, it will access
@@ -46,7 +46,9 @@ contract TenBankHall is Ownable, ITenBankHall, ReentrancyGuard {
     event SetEmergencyEnabled(uint256 indexed _sid, bool _newset);
     event SetBoxListed(uint256 indexed _boxid, bool _listed);
 
-    constructor() public {
+    function initialize() public initializer {
+        __Ownable_init();
+        __ReentrancyGuard_init();
     }
 
     // blacklist manager
@@ -127,7 +129,7 @@ contract TenBankHall is Ownable, ITenBankHall, ReentrancyGuard {
         require(!blacklist[msg.sender], 'address in blacklist');
 
         address lpToken = strategyInfo[_sid].iLink.getPoollpToken(strategyInfo[_sid].pid);
-        IERC20(lpToken).safeTransferFrom(msg.sender, address(strategyInfo[_sid].iLink), _amount);
+        IERC20Upgradeable(lpToken).safeTransferFrom(msg.sender, address(strategyInfo[_sid].iLink), _amount);
 
         address boxitem = address(0);
         if(_bAmount > 0) {
@@ -146,7 +148,7 @@ contract TenBankHall is Ownable, ITenBankHall, ReentrancyGuard {
 
         for(uint256 u = 0; u < collateralToken.length; u ++) {
             if(_amount[u] > 0) {
-                IERC20(collateralToken[u]).safeTransferFrom(msg.sender, address(strategyInfo[_sid].iLink), _amount[u]);
+                IERC20Upgradeable(collateralToken[u]).safeTransferFrom(msg.sender, address(strategyInfo[_sid].iLink), _amount[u]);
             }
         }
 
@@ -197,7 +199,7 @@ contract TenBankHall is Ownable, ITenBankHall, ReentrancyGuard {
         if(_maxDebt > 0) {
             (address borrowFrom,) = IStrategyLink(strategyInfo[_sid].iLink).getBorrowInfo(pid, _account);
             address borrowToken = ISafeBox(borrowFrom).token();
-            IERC20(borrowToken).safeTransferFrom(msg.sender, address(strategyInfo[_sid].iLink), _maxDebt);
+            IERC20Upgradeable(borrowToken).safeTransferFrom(msg.sender, address(strategyInfo[_sid].iLink), _maxDebt);
         }
         strategyInfo[_sid].iLink.liquidation(pid, _account, msg.sender, _maxDebt);
     }

@@ -3,7 +3,6 @@
 pragma solidity 0.6.12;
 
 import '../interfaces/IActionPools.sol';
-import "../interfaces/IBuyback.sol";
 import "../interfaces/IPriceChecker.sol";
 import '../interfaces/IStrategyConfig.sol';
 
@@ -46,10 +45,10 @@ contract StrategyV2Data {
 
     IStrategyV2SwapPool public swapPoolImpl;
 
-    IBuyback public buyback;
+    address public devAddr;
     IPriceChecker public priceChecker;
     IActionPools public compActionPool;     // address of comp action pool
-
+    
     mapping(address=>bool) public whitelist;
-    uint256[19] private __gap;
+    uint256[39] private __gap;
 }

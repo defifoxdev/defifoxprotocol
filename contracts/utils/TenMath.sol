@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.6.12;
 
-import "@openzeppelin/contracts/math/SafeMath.sol";
+import "@openzeppelinUpgrade/contracts/math/SafeMathUpgradeable.sol";
 
 library TenMath {
-  using SafeMath for uint256;
+  using SafeMathUpgradeable for uint256;
 
   function min(uint256 v1, uint256 v2) public pure returns (uint256 vr) {
     vr = v1 > v2 ? v2 : v1; 

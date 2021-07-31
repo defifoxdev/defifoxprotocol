@@ -1,2 +1,2 @@
-# boosterProtocol
+# defifoxProtocol
 #

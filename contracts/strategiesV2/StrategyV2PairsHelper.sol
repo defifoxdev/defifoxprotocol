@@ -2,16 +2,14 @@
 
 pragma solidity 0.6.12;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
-import "@openzeppelin/contracts/math/SafeMath.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelinUpgrade/contracts/token/ERC20/IERC20Upgradeable.sol";
+import "@openzeppelinUpgrade/contracts/token/ERC20/SafeERC20Upgradeable.sol";
+import "@openzeppelinUpgrade/contracts/math/SafeMathUpgradeable.sol";
 
 import "../interfaces/ISafeBox.sol";
 import '../interfaces/IActionPools.sol';
 import '../interfaces/ICompActionTrigger.sol';
 import "../interfaces/ITenBankHallV2.sol";
-import "../interfaces/IBuyback.sol";
 import "../interfaces/IPriceChecker.sol";
 import "../interfaces/IStrategyV2Pair.sol";
 import "../interfaces/IStrategyV2PairHelper.sol";
@@ -21,11 +19,8 @@ import "./StrategyV2Data.sol";
 
 // Borrow and Repay
 contract StrategyV2PairHelper is StrategyV2Data, IStrategyV2PairHelper {
-    using SafeMath for uint256;
-    using SafeERC20 for IERC20;
-
-    constructor() public {
-    }
+    using SafeMathUpgradeable for uint256;
+    using SafeERC20Upgradeable for IERC20Upgradeable;
 
     // check limit 
     function checkAddPoolLimit(uint256 _pid) external view {
@@ -102,8 +97,8 @@ contract StrategyV2PairHelper is StrategyV2Data, IStrategyV2PairHelper {
         PoolInfo storage pool = poolInfo[_pid];
         uint256 feerate;
         (gather, feerate) = sconfig.getDepositFee(_this, _pid);
-        _amount0 = IERC20(pool.collateralToken[0]).balanceOf(_this).mul(feerate).div(1e9);
-        _amount1 = IERC20(pool.collateralToken[1]).balanceOf(_this).mul(feerate).div(1e9);
+        _amount0 = IERC20Upgradeable(pool.collateralToken[0]).balanceOf(_this).mul(feerate).div(1e9);
+        _amount1 = IERC20Upgradeable(pool.collateralToken[1]).balanceOf(_this).mul(feerate).div(1e9);
     }
 
 
@@ -144,8 +139,8 @@ contract StrategyV2PairHelper is StrategyV2Data, IStrategyV2PairHelper {
             (res0, res1) = token00 == token0 ? (res0, res1) : (res1, res0);
         }
 
-        uint256 balance0 = IERC20(token0).balanceOf(_this);
-        uint256 balance1 = IERC20(token1).balanceOf(_this);
+        uint256 balance0 = IERC20Upgradeable(token0).balanceOf(_this);
+        uint256 balance1 = IERC20Upgradeable(token1).balanceOf(_this);
         if(bindex == 0) {
             amount = balance1.mul(res0).div(res1);
             if(amount > balance0) amount = amount.sub(balance0);
@@ -193,8 +188,8 @@ contract StrategyV2PairHelper is StrategyV2Data, IStrategyV2PairHelper {
         }
         uint256 rewardsRate = holdLPRewardsAmount.mul(1e9).div(holdLPTokenAmount);
         uint256 rewardsByBorrowRate = rewardsRate.mul(borrowRate).div(1e9).mul(feerate).div(1e9);
-        a0 = IERC20(pool.collateralToken[0]).balanceOf(_this).mul(rewardsByBorrowRate).div(1e9);
-        a1 = IERC20(pool.collateralToken[1]).balanceOf(_this).mul(rewardsByBorrowRate).div(1e9);
+        a0 = IERC20Upgradeable(pool.collateralToken[0]).balanceOf(_this).mul(rewardsByBorrowRate).div(1e9);
+        a1 = IERC20Upgradeable(pool.collateralToken[1]).balanceOf(_this).mul(rewardsByBorrowRate).div(1e9);
     }
 
     function calcLiquidationFee(uint256 _pid, address _account)
@@ -204,7 +199,7 @@ contract StrategyV2PairHelper is StrategyV2Data, IStrategyV2PairHelper {
         PoolInfo memory pool = poolInfo[_pid];
         uint256 feerate;
         (gather, feerate) = sconfig.getLiquidationFee(_this, _pid);
-        baseAmount = IERC20(pool.baseToken).balanceOf(_this).mul(feerate).div(1e9);
+        baseAmount = IERC20Upgradeable(pool.baseToken).balanceOf(_this).mul(feerate).div(1e9);
     }
 
     function calcWithdrawRepayBorrow(uint256 _pid, address _account, uint256 _rate, uint256 _index) 
@@ -225,12 +220,12 @@ contract StrategyV2PairHelper is StrategyV2Data, IStrategyV2PairHelper {
             amount = amount.mul(_rate).div(1e9);
         }
 
-        uint256 balance = IERC20(token).balanceOf(_this);
+        uint256 balance = IERC20Upgradeable(token).balanceOf(_this);
         if(balance < amount) {
             address swapToken = _index == 0 ? pool.collateralToken[1] : pool.collateralToken[0];
             swap = swapToken == pool.collateralToken[1];
             swapAmount = swapPoolImpl.getAmountOut(swapToken, token, amount.sub(balance));
-            swapAmount = TenMath.min(swapAmount, IERC20(swapToken).balanceOf(_this));
+            swapAmount = TenMath.min(swapAmount, IERC20Upgradeable(swapToken).balanceOf(_this));
         }
     }
 

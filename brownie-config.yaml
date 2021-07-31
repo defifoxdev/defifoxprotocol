@@ -3,7 +3,7 @@
 
 # use Ganache's forked mainnet mode as the default network
 networks:
-  default: heco
+  default: bsc
 
 # automatically fetch contract sources from Etherscan
 autofetch_sources: True
@@ -11,7 +11,11 @@ autofetch_sources: True
 # require OpenZepplin Contracts
 dependencies:
   - OpenZeppelin/openzeppelin-contracts@3.4.0
+  - OpenZeppelin/openzeppelin-contracts-upgradeable@3.4.0
   - smartcontractkit/chainlink-brownie-contracts@1.0.2
+  - uniswap/uniswap-v2-core@1.0.1
+  # - uniswap/uniswap-lib@1.1.2
+  - uniswap/uniswap-v2-periphery@1.0.0-beta.0
 
 # path remapping to support OpenZepplin imports with NPM-style path
 compiler:
@@ -21,8 +25,11 @@ compiler:
       enabled: true
       runs: 200
     remappings:
-      - "@openzeppelin=OpenZeppelin/openzeppelin-contracts@3.4.0"
-      - '@chainlink=smartcontractkit/chainlink-brownie-contracts@1.0.2'
+      - "@openzeppelinUpgrade=OpenZeppelin/openzeppelin-contracts-upgradeable@3.4.0"
+      - "@openzeppelinBase=OpenZeppelin/openzeppelin-contracts@3.4.0"
+      - "@chainlink=smartcontractkit/chainlink-brownie-contracts@1.0.2"
+      - "@uniswapv2core=uniswap/uniswap-v2-core@1.0.1"
+      - "@uniswapv2periphery=uniswap/uniswap-v2-periphery@1.0.0-beta.0"
 
 reports:
   exclude_contracts:
