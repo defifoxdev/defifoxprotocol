@@ -1,0 +1,5 @@
+Treasury    "0x763bdfe5204231eea6399bad1bb0bdbde7bde283"
+Boardroom   "0x243385ef537f188f3d4de7b701c7671911b3d12c"
+Oracle  "0xaf942551bb38cbd1963a4160e6d720ac7e0e3ac2"
+SimpleERCFund "0x370ed8a6f4449094bc072e6663c464327c3acc53"
+CARROT  "0xa5043373edc09f3f7d87fe35ca933e0a7b59d005"
