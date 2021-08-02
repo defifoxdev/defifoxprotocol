@@ -20,7 +20,7 @@ contract GRAPEToken is GRAPETokenERC20, Ownable, Operator, IRewardsToken {
     event LogRebase(uint256 indexed epoch, uint256 totalSupply);
 
     constructor () 
-        public GRAPETokenERC20('GRAP STABLE Coin', 'GRAP') {
+        public GRAPETokenERC20('GRAPE STABLE Coin', 'GRAPE') {
     }
 
     modifier onlyWhitelist() {
