@@ -10,9 +10,9 @@ import "./lib/Operator.sol";
 
 import "../interfaces/IRewardsToken.sol";
 
-import "./GRAPTokenERC20.sol";
+import "./GRAPETokenERC20.sol";
 
-contract GRAPToken is GRAPTokenERC20, Ownable, Operator, IRewardsToken {
+contract GRAPEToken is GRAPETokenERC20, Ownable, Operator, IRewardsToken {
     using SafeMath for uint256;
 
     mapping(address => bool) public mintWhitelist;
@@ -20,7 +20,7 @@ contract GRAPToken is GRAPTokenERC20, Ownable, Operator, IRewardsToken {
     event LogRebase(uint256 indexed epoch, uint256 totalSupply);
 
     constructor () 
-        public GRAPTokenERC20('GRAP STABLE Coin', 'GRAP') {
+        public GRAPETokenERC20('GRAP STABLE Coin', 'GRAP') {
     }
 
     modifier onlyWhitelist() {

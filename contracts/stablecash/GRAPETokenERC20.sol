@@ -34,7 +34,7 @@ import "@openzeppelinBase/contracts/math/SignedSafeMath.sol";
  * functions have been added to mitigate the well-known issues around setting
  * allowances. See {IERC20-approve}.
  */
-contract GRAPTokenERC20 is Context, IERC20 {
+contract GRAPETokenERC20 is Context, IERC20 {
     using SafeMath for uint256;
 
     uint256 private constant MAX_UINT256 = ~uint256(0);
