@@ -20,4 +20,10 @@ interface IFOXPools {
     function claim(uint256 _pid) external returns (uint256 value);
     function claimAll() external returns (uint256 value);
     function emergencyWithdraw(uint256 _pid) external;
+
+    function updatePool(uint256 _pid) external;
+    function massUpdatePools() external;
+    function poolInfo(uint256 _pid) external view returns (address,uint256,uint256,uint256,uint256);
+    function userInfo(uint256 _pid,address _user) external view returns (uint256,uint256,uint256);
+    function getBlocksReward(uint256 _from, uint256 _to) external view returns (uint256 value);
 }

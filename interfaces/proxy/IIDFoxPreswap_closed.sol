@@ -3,6 +3,7 @@
 pragma solidity 0.6.12;
 
 interface IIDFoxPreswap {
+    function owner() external view returns (address);
 
     function swapRouters(address) external view returns (address);
     function defaultSwapRouter() external view returns (address);
@@ -17,7 +18,7 @@ interface IIDFoxPreswap {
     function mintOutRate() external view returns (uint);
     function investDecimals() external view returns (uint);
     function iWHT() external view returns (address);
-    
+
     function initialize(address _investToken, address _idfoxToken, uint _mintOutRate, address _iWHT, address _defaultSwapRouter) external;
 
     function setOper(address _oper, bool _enable) external;

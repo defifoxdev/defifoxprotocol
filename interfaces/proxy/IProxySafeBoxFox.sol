@@ -5,6 +5,8 @@ pragma solidity 0.6.12;
 import "@openzeppelinBase/contracts/token/ERC20/IERC20.sol";
 
 interface IProxySafeBoxFox is IERC20 {
+    function owner() external view returns (address);
+
     function token() external view returns (address);
     function symbol() external view returns (string memory);
     function setBuyback(address _iBuyback) external;

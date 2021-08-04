@@ -3,6 +3,8 @@
 pragma solidity 0.6.12;
 
 interface IProxyBank {
+    function owner() external view returns (address);
+    
     function setBlacklist(address _account, bool _newset) external;
     function setEmergencyEnabled(uint256 _sid, bool _newset) external;
     function claimLength() external view returns (uint256);
