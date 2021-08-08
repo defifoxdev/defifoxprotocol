@@ -6,6 +6,9 @@ interface IFOXPools {
     function owner() external view returns (address);
 
     function poolLength() external view returns (uint256);
+    function totalAllocPoint() external view returns (uint256);
+    function rewardPerBlock() external view returns (uint256);
+
     function add(uint256 _allocPoint, address _lpToken) external;
     function setRewardPerBlock(uint256 _rewardPerBlock) external;
     function setExtendPool(address _extendPool) external;

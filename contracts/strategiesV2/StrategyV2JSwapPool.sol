@@ -27,12 +27,13 @@ contract StrategyV2JSwapPool is IStrategyV2SwapPool {
 
     IJSwapPool public constant farmpool = IJSwapPool(0x83C35EA2C32293aFb24aeB62a14fFE920C2259ab);
     IJSwapSwapPool public constant swappool = IJSwapSwapPool(0x0B29065f0C5B9Db719f180149F0251598Df2F1e4);
-    address public constant rewardToken = address(0x8179D97Eb6488860d816e3EcAFE694a4153F216c);
+    address public constant rewardToken = address(0x5fAc926Bf1e638944BB16fb5B787B5bA4BC85b0A);
 
     address public strategy;
 
     constructor() public {
-        
+        require(farmpool.jf() == rewardToken, 'rewardToken error');
+        require(swappool.jfToken() == rewardToken, 'rewardToken2 error');
     }
 
     function setStrategy(address _strategy) external override {
@@ -46,7 +47,7 @@ contract StrategyV2JSwapPool is IStrategyV2SwapPool {
     }
 
     function getName() external override view returns (string memory name) {
-        name = 'cherry';
+        name = 'jswap';
     }
 
     function getPair(address _t0, address _t1) 

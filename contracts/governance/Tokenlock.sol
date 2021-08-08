@@ -23,7 +23,7 @@ contract Tokenlock {
     uint256 public immutable totalAmount;
     uint256 public immutable drawCount;
     uint256 public drawAmount;
-    uint256 public constant releaseInterval = (1 weeks);
+    uint256 public constant releaseInterval = (1 days);
 
     constructor (
             address _rewardToken, address _toAddress,
