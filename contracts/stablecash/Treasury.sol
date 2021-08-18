@@ -41,7 +41,12 @@ contract Treasury is ContractGuard, Epoch, Orchestrator {
     // ========== CORE
     address public fund;
     address public cash;
+
+    address public boardroomTimeLock;
+    uint256 public boardroomTimeLockProportion = 70;
+    
     address public boardroom;
+    uint256 public boardroomProportion = 30;
 
     address public seigniorageOracle;
 
@@ -52,7 +57,7 @@ contract Treasury is ContractGuard, Epoch, Orchestrator {
     uint256 public IssuanceRatio = 80;
     uint256 public treasuryReserveRatio = 20;
 
-    uint256 public timePeriod = 5 minutes; // 49 hour
+    uint256 public timePeriod = 12 hours;
     int256 public inflationDeflationAmount = 0;
 
     /* ========== CONSTRUCTOR ========== */
@@ -60,12 +65,14 @@ contract Treasury is ContractGuard, Epoch, Orchestrator {
     constructor(
         address _cash,
         address _seigniorageOracle,
+        address _boardroomTimeLock,
         address _boardroom,
         address _fund,
         uint256 _startTime
     ) public Epoch(10 minutes, _startTime, 0) {
         cash = _cash;
         seigniorageOracle = _seigniorageOracle;
+        boardroomTimeLock = _boardroomTimeLock;
         boardroom = _boardroom;
         fund = _fund;
     }
@@ -81,6 +88,7 @@ contract Treasury is ContractGuard, Epoch, Orchestrator {
     modifier checkOperator {
         require(
             IBasisAsset(cash).operator() == address(this) &&
+                Operator(boardroomTimeLock).operator() == address(this) &&
                 Operator(boardroom).operator() == address(this),
             'Treasury: need more permission'
         );
@@ -164,11 +172,12 @@ contract Treasury is ContractGuard, Epoch, Orchestrator {
         if (cashPrice < cashPriceOne) {
                 IBasisAsset(cash).rebase(epoch,inflationDeflationAmount);
                 externalCall();
+                IBoardroom(boardroomTimeLock).burnReward();
                 IBoardroom(boardroom).burnReward();
             return; // just advance epoch instead revert
         }
-        
-        IBoardroom(boardroom).setTimeLock(block.timestamp.add(timePeriod));
+
+        IBoardroom(boardroomTimeLock).setTimeLock(block.timestamp.add(timePeriod));
         uint256 seigniorage = uint256(inflationDeflationAmount).mul(IssuanceRatio).div(100);  // IssuanceRatio = 50
 
         // --BIP 2 Fund
@@ -186,12 +195,16 @@ contract Treasury is ContractGuard, Epoch, Orchestrator {
         seigniorage = seigniorage.sub(fundReserve);    // fundAllocationRate out = 90
         
         // --BIP 3 Boardroom
-        uint256 boardroomReserve = seigniorage;
-        if (boardroomReserve > 0) {
+        if (seigniorage > 0) {
+            IRewardsToken(cash).mint(address(this), seigniorage);
+            // boardroomTimeLock
+            uint256 boardroomTimeSeigniorage = seigniorage.mul(boardroomTimeLockProportion).div(100); // boardroomTimeLockProportion = 70
+            IERC20(cash).safeApprove(boardroomTimeLock, boardroomTimeSeigniorage);
+            IBoardroom(boardroomTimeLock).allocateSeigniorage(boardroomTimeSeigniorage);
             // boardroom
-            IRewardsToken(cash).mint(address(this), boardroomReserve);
-            IERC20(cash).safeApprove(boardroom, boardroomReserve);
-            IBoardroom(boardroom).allocateSeigniorage(boardroomReserve);
+            uint256 boardroomSeigniorage = seigniorage.mul(boardroomProportion).div(100); // boardroomProportion = 30
+            IERC20(cash).safeApprove(boardroom, boardroomSeigniorage);
+            IBoardroom(boardroom).allocateSeigniorage(boardroomSeigniorage);
             emit BoardroomFunded(now, seigniorage);
         }
     }
@@ -210,11 +223,14 @@ contract Treasury is ContractGuard, Epoch, Orchestrator {
         if(rate < targetRate) {
             supply = IERC20(cash).totalSupply().toInt256Safe();
         }
-        return supply.
-                    mul(rate.toInt256Safe().sub(targetRateSigned)).
+        return supply.mul(rate.toInt256Safe().sub(targetRateSigned)).
                     div(targetRateSigned);
     }
-    
+
+    function setBoardroomProportion(uint256 _boardroomTimeLockProp,uint256 _boardroomProp) external onlyOperator {
+        boardroomTimeLockProportion = _boardroomTimeLockProp;
+        boardroomProportion = _boardroomProp;
+    }
     // GOV  
     event Migration(address indexed target);
     event ContributionPoolChanged(address indexed operator, address newFund);

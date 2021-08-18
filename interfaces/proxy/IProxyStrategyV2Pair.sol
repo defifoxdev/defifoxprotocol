@@ -12,6 +12,11 @@ interface IProxyStrategyV2Pair is IStrategyV2Pair {
             external;
     function setPoolConfig(uint256 _pid, string memory _key, uint256 _value)
         external;
+    function setMiniRewardAmount(uint256 _pid, uint256 _miniRewardAmount)
+        external;
+    function poolInfo(uint256 _pid)
+        external view returns (address,address,uint256,uint256,uint256,uint256,uint256,uint256);
+
     // function symbol() external view returns (string memory);
     // function setBuyback(address _iBuyback) external;
     // function setCompAcionPool(address _compActionPool) external;
